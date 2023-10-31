@@ -1,38 +1,121 @@
-import { useEffect, useState } from 'react';
-import ChatBot from 'react-simple-chatbot';
-import axios from "axios";
-
-export const Chatbox = () => {
-    const [msg, setMsg] = useState([]);
-    const [usermsg, setUserMsg] = useState([]);
+import React , {Component} from "react";
+import PropTypes  from 'prop-types'
+import ChatBot, {Loading} from 'react-simple-chatbot';
+import axios from 'axios';
 
 
-    useEffect(() => {
-        axios.get("http://localhost:8080/", usermsg).then((response) => {
-            setMsg(response.data);
-            console.log(msg);
+
+class Openai extends Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            loading: true,
+            result: '',
+            trigger: false,
+        };
+
+        this.triggerNext = this.triggerNext.bind(this);
+    }
+
+    componentWillMount() {
+        const self = this;
+        const {steps} = this.props;
+        const chats = steps.chat.value;
+        const fetchData = async() => {
+            
+            await axios.post("http://localhost:3000",{chats}).then((res)=>{
+                const data = res.data;
+                if(data){
+                    self.setState({
+                        loading: false,
+                        result: data
+                    });
+                }else{
+                    self.setState({
+                        loading:false, 
+                        result: 'Not found'
+                    });
+                }
+                }).catch((err)=>{
+                console.log(err);
+            })
+        }
+
+        fetchData();
+    }
+    triggerNext(){
+        this.setState({trigger: true}, ()=>{
+            this.props.triggerNextStep();
         });
-    }, []);
-  
-const steps = [
-    {
-        id: '0',
-        message: { msg },
-        trigger: '1',
-    },
-    {
-        id: '1',
-        user: true,
-        message: { usermsg },
-        trigger: '0'
-    },
-];
+    }
 
-return (
-    <div>
-        <ChatBot steps={steps} />
-    </div>
-)
+
+    render() {
+        const {trigger, loading, result} = this.state;
+
+        return(
+            <div>
+                {loading ? <Loading /> : result}
+                {
+                    !loading && (
+                        <div
+                            style={{
+                                textAlign: 'center',
+                                marginTop: 20,
+                            }}
+                        ></div>
+
+                    )
+                }
+                {
+                    !trigger &&  this.setState({trigger: true},()=>{
+                        this.props.triggerNextStep();
+                    })
+                }
+            </div>
+        );
+    }
+        
 }
 
-export default Chatbox;
+Openai.propTypes = {
+    steps: PropTypes.object,
+    triggerNextStep : PropTypes.func,
+};
+
+Openai.defaultProps = {
+    steps: undefined,
+    triggerNextStep: undefined,
+};
+
+const Chatbot = () => {
+    return(
+        <div>
+            <ChatBot steps={
+                [
+                    {
+                        id: '1',
+                        message: 'Ask me Amything',
+                        trigger: 'chat'
+                    },
+                    {
+                        id: 'chat',
+                        user: true,
+                        trigger: '2',
+                    },
+                    {
+                        id:'2',
+                        component: <Openai />,
+                        asMessage:true,
+                        waitAction: true,
+                        trigger: 'chat',
+                    }
+                ]
+            } />
+        </div>
+    )
+}
+
+export default Chatbot;
+

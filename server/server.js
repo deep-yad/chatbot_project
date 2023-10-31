@@ -1,4 +1,3 @@
-
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -19,23 +18,14 @@ const openai = new OpenAI({
 
 app.post("/", async (req, res) => {
     const { chats } = req.body;
-    const chatCompletion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-            {
-                role: "system",
-                content: "you are Scofield. You can answer some trivial question"
-            },
-            ...chats,
-        ],
+    console.log(chats);
+    const chatCompletion = await openai.completions.create({
+        model: "text-davinci-003",
+        prompt:chats,
     });
-
-
-    res.json({
-        output: chatCompletion.choices[0].message,
-    });
+    res.send(chatCompletion.choices[0].text);
 })
 
-app.listen(8080, () => {
-    console.log("port is listening at port 8080");
+app.listen(3000, () => {
+    console.log("port is listening at port 3000");
 })
